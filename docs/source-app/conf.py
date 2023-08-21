@@ -17,6 +17,7 @@ import shutil
 import sys
 
 import lai_sphinx_theme
+from lightning_utilities.docs import fetch_external_assets
 
 import lightning
 
@@ -24,7 +25,8 @@ _PATH_HERE = os.path.abspath(os.path.dirname(__file__))
 _PATH_ROOT = os.path.realpath(os.path.join(_PATH_HERE, "..", ".."))
 sys.path.insert(0, os.path.abspath(_PATH_ROOT))
 
-SPHINX_MOCK_REQUIREMENTS = int(os.environ.get("SPHINX_MOCK_REQUIREMENTS", True))
+_SPHINX_MOCK_REQUIREMENTS = int(os.environ.get("SPHINX_MOCK_REQUIREMENTS", True))
+_FAST_DOCS_DEV = int(os.environ.get("FAST_DOCS_DEV", True))
 
 # -- Project information -----------------------------------------------------
 
@@ -45,38 +47,22 @@ github_repo = project
 
 # -- Project documents -------------------------------------------------------
 
-
-# def _transform_changelog(path_in: str, path_out: str) -> None:
-#     with open(path_in) as fp:
-#         chlog_lines = fp.readlines()
-#     # enrich short subsub-titles to be unique
-#     chlog_ver = ""
-#     for i, ln in enumerate(chlog_lines):
-#         if ln.startswith("## "):
-#             chlog_ver = ln[2:].split("-")[0].strip()
-#         elif ln.startswith("### "):
-#             ln = ln.replace("###", f"### {chlog_ver} -")
-#             chlog_lines[i] = ln
-#     with open(path_out, "w") as fp:
-#         fp.writelines(chlog_lines)
-
-
-# export the READme
-# _convert_markdown(os.path.join(_PATH_ROOT, "README.md"), "readme.md")
+if not _FAST_DOCS_DEV:
+    fetch_external_assets(
+        docs_folder=_PATH_HERE, assets_folder="_static/fetched-s3-assets", retrieve_pattern=r"https?://[-a-zA-Z0-9_]+\.s3\.[-a-zA-Z0-9()_\\+.\\/=]+"
+    )
 
 # -- General configuration ---------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
 
-needs_sphinx = "4.5"
+needs_sphinx = "5.3"
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
-    # 'sphinxcontrib.mockautodoc',  # raises error: directive 'automodule' is already registered ...
-    # 'sphinxcontrib.fulltoc',  # breaks pytorch-theme with unexpected kw argument 'titles_only'
     "sphinx.ext.doctest",
     "sphinx.ext.intersphinx",
     "sphinx_toolbox.collapse",
@@ -86,6 +72,9 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinx.ext.imgmath",
+    # 'sphinxcontrib.mockautodoc',  # raises error: directive 'automodule' is already registered ...
+    # 'sphinxcontrib.fulltoc',  # breaks pytorch-theme with unexpected kw argument 'titles_only'
+    "sphinxcontrib.video",
     "myst_parser",
     "sphinx.ext.autosectionlabel",
     "nbsphinx",
@@ -315,7 +304,7 @@ PACKAGE_MAPPING = {
     "PyYAML": "yaml",
 }
 MOCK_PACKAGES = []
-if SPHINX_MOCK_REQUIREMENTS:
+if _SPHINX_MOCK_REQUIREMENTS:
     # mock also base packages when we are on RTD since we don't install them there
     MOCK_PACKAGES += _package_list_from_file(os.path.join(_PATH_ROOT, "requirements.txt"))
 MOCK_PACKAGES = [PACKAGE_MAPPING.get(pkg, pkg) for pkg in MOCK_PACKAGES]
