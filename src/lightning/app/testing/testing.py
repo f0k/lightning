@@ -144,7 +144,9 @@ class LightningTestApp(LightningApp):
 @requires("click")
 def application_testing(lit_app_cls: Type[LightningTestApp] = LightningTestApp, command_line: List[str] = []) -> Any:
     from unittest import mock
+
     from click.testing import CliRunner
+
     from lightning.cli.lightning_cli import run_app
 
     with mock.patch("lightning.app.LightningApp", lit_app_cls):
