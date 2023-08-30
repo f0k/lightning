@@ -69,6 +69,7 @@ class _FitLoop(_Loop):
     Args:
         min_epochs: The minimum number of epochs
         max_epochs: The maximum number of epochs, can be set -1 to turn this limit off
+
     """
 
     def __init__(
@@ -326,8 +327,6 @@ class _FitLoop(_Loop):
             _set_sampler_epoch(dl, self.epoch_progress.current.processed)
 
         self.epoch_progress.increment_ready()
-
-        trainer._logger_connector.on_epoch_start()
 
         call._call_callback_hooks(trainer, "on_train_epoch_start")
         call._call_lightning_module_hook(trainer, "on_train_epoch_start")

@@ -89,6 +89,7 @@ class _EvaluationLoop(_Loop):
         """In "sequential" mode, the max number of batches to run per dataloader.
 
         Otherwise, the max batches to run.
+
         """
         max_batches = self._max_batches
         if not self.trainer.sanity_checking:
@@ -156,7 +157,7 @@ class _EvaluationLoop(_Loop):
     def setup_data(self) -> None:
         trainer = self.trainer
         trainer_fn = self._trainer_fn
-        if self._combined_loader is not None and trainer_fn == "fit" and not self._should_reload_val_dl:
+        if self._combined_loader is not None and trainer_fn == TrainerFn.FITTING and not self._should_reload_val_dl:
             return
 
         pl_module = trainer.lightning_module
@@ -167,7 +168,7 @@ class _EvaluationLoop(_Loop):
 
         # store epoch of dataloader reset for reload_dataloaders_every_n_epochs
         # it should not reload again if it has already reloaded during sanity_check
-        if trainer_fn == "fit" and (
+        if trainer_fn == TrainerFn.FITTING and (
             (trainer.sanity_checking and trainer.fit_loop.epoch_loop._should_check_val_epoch())
             or not trainer.sanity_checking
         ):
@@ -183,7 +184,7 @@ class _EvaluationLoop(_Loop):
         else:
             combined_loader = dataloaders
 
-        if trainer_fn == "fit" and trainer.overfit_batches > 0:
+        if trainer_fn == TrainerFn.FITTING and trainer.overfit_batches > 0:
             _resolve_overfit_batches(combined_loader, stage)
 
         dataloaders = []
@@ -295,7 +296,7 @@ class _EvaluationLoop(_Loop):
         self._on_evaluation_model_train()
 
         if self.verbose and self.trainer.is_global_zero:
-            self._print_results(logged_outputs, self._stage)
+            self._print_results(logged_outputs, self._stage.value)
 
         return logged_outputs
 
@@ -341,8 +342,6 @@ class _EvaluationLoop(_Loop):
         """Runs the ``on_{validation/test}_epoch_start`` hooks."""
         trainer = self.trainer
 
-        trainer._logger_connector.on_epoch_start()
-
         hook_name = "on_test_epoch_start" if trainer.testing else "on_validation_epoch_start"
         call._call_callback_hooks(trainer, hook_name, *args, **kwargs)
         call._call_lightning_module_hook(trainer, hook_name, *args, **kwargs)
@@ -377,9 +376,11 @@ class _EvaluationLoop(_Loop):
             batch: The current batch to run through the step.
             batch_idx: The index of the current batch
             dataloader_idx: the index of the dataloader producing the current batch
+
         """
         trainer = self.trainer
 
+        batch = trainer.precision_plugin.convert_input(batch)
         batch = trainer.lightning_module._on_before_batch_transfer(batch, dataloader_idx=dataloader_idx)
         batch = call._call_strategy_hook(trainer, "batch_to_device", batch, dataloader_idx=dataloader_idx)
 
@@ -389,7 +390,9 @@ class _EvaluationLoop(_Loop):
 
         self.batch_progress.increment_ready()
 
-        trainer._logger_connector.on_batch_start(**step_kwargs)
+        trainer._logger_connector.on_batch_start(
+            batch, dataloader_idx if self._is_sequential and self.num_dataloaders > 1 else None
+        )
 
         hook_name = "on_test_batch_start" if trainer.testing else "on_validation_batch_start"
         call._call_callback_hooks(trainer, hook_name, *step_kwargs.values())
@@ -431,6 +434,7 @@ class _EvaluationLoop(_Loop):
 
         Returns:
             the dictionary containing all the keyboard arguments for the step
+
         """
         step_kwargs = OrderedDict([("batch", batch), ("batch_idx", batch_idx)])
         if dataloader_idx is not None:

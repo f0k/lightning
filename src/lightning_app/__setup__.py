@@ -39,7 +39,7 @@ def _prepare_extras() -> Dict[str, Any]:
     extras = {
         p.stem: assistant.load_requirements(file_name=p.name, **common_args)
         for p in req_files
-        if p.name not in ("docs.txt", "base.txt")
+        if p.name not in ("docs.txt", "app.txt")
     }
     extras["extra"] = extras["cloud"] + extras["ui"] + extras["components"]
     extras["all"] = extras["extra"]
@@ -77,7 +77,7 @@ def _setup_args() -> Dict[str, Any]:
         "python_requires": ">=3.8",
         "setup_requires": [],
         "install_requires": assistant.load_requirements(
-            _PATH_REQUIREMENTS, unfreeze="none" if _FREEZE_REQUIREMENTS else "major"
+            _PATH_REQUIREMENTS, file_name="app.txt", unfreeze="none" if _FREEZE_REQUIREMENTS else "major"
         ),
         "extras_require": _prepare_extras(),
         "project_urls": {
@@ -104,5 +104,6 @@ def _setup_args() -> Dict[str, Any]:
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",
             "Programming Language :: Python :: 3.10",
+            "Programming Language :: Python :: 3.11",
         ],
     }

@@ -40,9 +40,7 @@ except ModuleNotFoundError:
     # needed for test mocks, these tests shall be updated
     wandb, Run, RunDisabled = None, None, None
 
-_WANDB_AVAILABLE = RequirementCache("wandb")
-_WANDB_GREATER_EQUAL_0_10_22 = RequirementCache("wandb>=0.10.22")
-_WANDB_GREATER_EQUAL_0_12_10 = RequirementCache("wandb>=0.12.10")
+_WANDB_AVAILABLE = RequirementCache("wandb>=0.12.10")
 
 
 class WandbLogger(Logger):
@@ -207,7 +205,8 @@ class WandbLogger(Logger):
 
     **Log Tables**
 
-    `W&B Tables <https://docs.wandb.ai/guides/data-vis>`_ can be used to log, query and analyze tabular data.
+    `W&B Tables <https://docs.wandb.ai/guides/tables/visualize-tables>`_ can be used to log,
+    query and analyze tabular data.
 
     They support any type of media (text, image, video, audio, molecule, html, etc) and are great for storing,
     understanding and sharing any form of data, from datasets to model predictions.
@@ -260,7 +259,8 @@ class WandbLogger(Logger):
         dir: Same as save_dir.
         id: Same as version.
         anonymous: Enables or explicitly disables anonymous logging.
-        project: The name of the project to which this run will belong.
+        project: The name of the project to which this run will belong. If not set, the environment variable
+            `WANDB_PROJECT` will be used as a fallback. If both are not set, it defaults to ``'lightning_logs'``.
         log_model: Log checkpoints created by :class:`~lightning.pytorch.callbacks.ModelCheckpoint`
             as W&B artifacts. `latest` and `best` aliases are automatically set.
 
@@ -280,6 +280,7 @@ class WandbLogger(Logger):
             If required WandB package is not installed on the device.
         MisconfigurationException:
             If both ``log_model`` and ``offline`` is set to ``True``.
+
     """
 
     LOGGER_JOIN_CHAR = "-"
@@ -293,31 +294,21 @@ class WandbLogger(Logger):
         dir: Optional[_PATH] = None,
         id: Optional[str] = None,
         anonymous: Optional[bool] = None,
-        project: str = "lightning_logs",
+        project: Optional[str] = None,
         log_model: Union[str, bool] = False,
         experiment: Union[Run, RunDisabled, None] = None,
         prefix: str = "",
         checkpoint_name: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
-        if wandb is None:
-            raise ModuleNotFoundError(
-                "You want to use `wandb` logger which is not installed yet,"
-                " install it with `pip install wandb`."  # pragma: no-cover
-            )
+        if wandb is None or not _WANDB_AVAILABLE:
+            raise ModuleNotFoundError(str(_WANDB_AVAILABLE))
 
         if offline and log_model:
             raise MisconfigurationException(
                 f"Providing log_model={log_model} and offline={offline} is an invalid configuration"
                 " since model checkpoints cannot be uploaded in offline mode.\n"
                 "Hint: Set `offline=False` to log your model."
-            )
-
-        if log_model and not _WANDB_GREATER_EQUAL_0_10_22:
-            rank_zero_warn(
-                f"Providing log_model={log_model} requires wandb version >= 0.10.22"
-                " for logging associated model metadata.\n"
-                "Hint: Upgrade with `pip install --upgrade wandb`."
             )
 
         super().__init__()
@@ -333,6 +324,8 @@ class WandbLogger(Logger):
             save_dir = os.fspath(save_dir)
         elif dir is not None:
             dir = os.fspath(dir)
+
+        project = project or os.environ.get("WANDB_PROJECT", "lightning_logs")
 
         # set wandb init arguments
         self._wandb_init: Dict[str, Any] = {
@@ -356,9 +349,8 @@ class WandbLogger(Logger):
         # We create an experiment here in the main process, and attach to it in the worker process.
         # Using wandb-service, we persist the same experiment even if multiple `Trainer.fit/test/validate` calls
         # are made.
-        if _WANDB_GREATER_EQUAL_0_12_10:
-            wandb.require("service")
-            _ = self.experiment
+        wandb.require("service")
+        _ = self.experiment
 
         state = self.__dict__.copy()
         # args needed to reload correct experiment
@@ -419,7 +411,7 @@ class WandbLogger(Logger):
         self.experiment.watch(model, log=log, log_freq=log_freq, log_graph=log_graph)
 
     @rank_zero_only
-    def log_hyperparams(self, params: Union[Dict[str, Any], Namespace]) -> None:
+    def log_hyperparams(self, params: Union[Dict[str, Any], Namespace]) -> None:  # type: ignore[override]
         params = _convert_params(params)
         params = _sanitize_callable_params(params)
         self.experiment.config.update(params, allow_val_change=True)
@@ -446,6 +438,7 @@ class WandbLogger(Logger):
         """Log a Table containing any object type (text, image, audio, video, molecule, html, etc).
 
         Can be defined either with `columns` and `data` or with `dataframe`.
+
         """
 
         metrics = {key: wandb.Table(columns=columns, data=data, dataframe=dataframe)}
@@ -463,6 +456,7 @@ class WandbLogger(Logger):
         """Log text as a Table.
 
         Can be defined either with `columns` and `data` or with `dataframe`.
+
         """
 
         self.log_table(key, columns, data, dataframe, step)
@@ -472,6 +466,7 @@ class WandbLogger(Logger):
         """Log images (tensors, numpy arrays, PIL Images or file paths).
 
         Optional kwargs are lists passed to each image (ex: caption, masks, boxes).
+
         """
         if not isinstance(images, list):
             raise TypeError(f'Expected a list as "images", found {type(images)}')
@@ -481,7 +476,7 @@ class WandbLogger(Logger):
                 raise ValueError(f"Expected {n} items but only found {len(v)} for {k}")
         kwarg_list = [{k: kwargs[k][i] for k in kwargs} for i in range(n)]
         metrics = {key: [wandb.Image(img, **kwarg) for img, kwarg in zip(images, kwarg_list)]}
-        self.log_metrics(metrics, step)
+        self.log_metrics(metrics, step)  # type: ignore[arg-type]
 
     @property
     def save_dir(self) -> Optional[str]:
@@ -489,6 +484,7 @@ class WandbLogger(Logger):
 
         Returns:
             The path to the save directory.
+
         """
         return self._save_dir
 
@@ -499,6 +495,7 @@ class WandbLogger(Logger):
         Returns:
             The name of the project the current experiment belongs to. This name is not the same as `wandb.Run`'s
             name. To access wandb's internal experiment name, use ``logger.experiment.name`` instead.
+
         """
         return self._project
 
@@ -508,6 +505,7 @@ class WandbLogger(Logger):
 
         Returns:
             The id of the experiment if the experiment exists else the id given to the constructor.
+
         """
         # don't create an experiment if we don't have one
         return self._experiment.id if self._experiment else self._id
@@ -537,6 +535,7 @@ class WandbLogger(Logger):
 
         Returns:
             The path to the downloaded artifact.
+
         """
         if wandb.run is not None and use_artifact:
             artifact = wandb.run.use_artifact(artifact)
@@ -556,6 +555,7 @@ class WandbLogger(Logger):
 
         Returns:
             wandb Artifact object for the artifact.
+
         """
         return self.experiment.use_artifact(artifact, type=artifact_type)
 
@@ -574,27 +574,23 @@ class WandbLogger(Logger):
 
         # log iteratively all new checkpoints
         for t, p, s, tag in checkpoints:
-            metadata = (
-                {
-                    "score": s.item() if isinstance(s, Tensor) else s,
-                    "original_filename": Path(p).name,
-                    checkpoint_callback.__class__.__name__: {
-                        k: getattr(checkpoint_callback, k)
-                        for k in [
-                            "monitor",
-                            "mode",
-                            "save_last",
-                            "save_top_k",
-                            "save_weights_only",
-                            "_every_n_train_steps",
-                        ]
-                        # ensure it does not break if `ModelCheckpoint` args change
-                        if hasattr(checkpoint_callback, k)
-                    },
-                }
-                if _WANDB_GREATER_EQUAL_0_10_22
-                else None
-            )
+            metadata = {
+                "score": s.item() if isinstance(s, Tensor) else s,
+                "original_filename": Path(p).name,
+                checkpoint_callback.__class__.__name__: {
+                    k: getattr(checkpoint_callback, k)
+                    for k in [
+                        "monitor",
+                        "mode",
+                        "save_last",
+                        "save_top_k",
+                        "save_weights_only",
+                        "_every_n_train_steps",
+                    ]
+                    # ensure it does not break if `ModelCheckpoint` args change
+                    if hasattr(checkpoint_callback, k)
+                },
+            }
             if not self._checkpoint_name:
                 self._checkpoint_name = f"model-{self.experiment.id}"
             artifact = wandb.Artifact(name=self._checkpoint_name, type="model", metadata=metadata)

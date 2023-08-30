@@ -5,7 +5,7 @@ subprojects:
 
   - id: "pytorch_lightning: Tests workflow"
     paths:
-      - ".actions/**"
+      - ".actions/*"
       - ".github/workflows/ci-tests-pytorch.yml"
       - "requirements/fabric/**"
       - "src/lightning/fabric/**"
@@ -38,10 +38,13 @@ subprojects:
       - "pl-cpu (macOS-11, pytorch, 3.8, 1.13)"
       - "pl-cpu (ubuntu-20.04, pytorch, 3.8, 1.13)"
       - "pl-cpu (windows-2022, pytorch, 3.8, 1.13)"
+      - "pl-cpu (macOS-12, pytorch, 3.11, 2.0)"
+      - "pl-cpu (ubuntu-22.04, pytorch, 3.11, 2.0)"
+      - "pl-cpu (windows-2022, pytorch, 3.11, 2.0)"
 
   - id: "pytorch_lightning: Azure GPU"
     paths:
-      - ".actions/**"
+      - ".actions/*"
       - ".azure/gpu-tests-pytorch.yml"
       # only the azure GPU workflow runs the examples
       # all examples don't need to be added because they aren't used in CI, but these are
@@ -66,18 +69,24 @@ subprojects:
       - "!*.md"
       - "!**/*.md"
     checks:
-      - "pytorch-lightning (GPUs)"
+      - "pytorch-lightning (GPUs) (testing Lightning | latest)"
+      - "pytorch-lightning (GPUs) (testing PyTorch | latest)"
 
   - id: "pytorch_lightning: Benchmarks"
     paths:
-      - ".azure/gpu-benchmark.yml"
-      - "tests/tests_pytorch/benchmarks/**"
+      - ".azure/gpu-benchmarks.yml"
+      - "requirements/fabric/**"
       - "requirements/pytorch/**"
+      - "src/lightning/fabric/**"
+      - "src/lightning/pytorch/**"
+      - "tests/parity_fabric/**"
+      - "tests/parity_pytorch/**"
+      - "!requirements/fabric/docs.txt"
       - "!requirements/pytorch/docs.txt"
       - "!*.md"
       - "!**/*.md"
     checks:
-      - "pytorch-lightning.Benchmark"
+      - "lightning.Benchmarks"
 
   - id: "pytorch-lightning: TPU workflow"
     paths:
@@ -102,15 +111,15 @@ subprojects:
       - "!*.md"
       - "!**/*.md"
     checks:
-      - "make-doctest (fabric)"
-      - "make-html (fabric)"
+      - "docs-make (fabric, doctest)"
+      - "docs-make (fabric, html)"
 
   - id: "pytorch_lightning: Docs"
     paths:
       - "src/lightning/pytorch/**"
       - "src/pytorch_lightning/*"
       - "docs/source-pytorch/**"
-      - ".actions/**"
+      - ".actions/*"
       - ".github/workflows/docs-build.yml"
       - "requirements/docs.txt"
       - "requirements/pytorch/**"
@@ -119,37 +128,58 @@ subprojects:
       - "!*.md"
       - "!**/*.md"
     checks:
-      - "make-doctest (pytorch)"
-      - "make-html (pytorch)"
+      - "docs-make (pytorch, doctest)"
+      - "docs-make (pytorch, html)"
 
   - id: "pytorch_lightning: Docker"
     paths:
-      - ".actions/**"
-      - ".github/workflows/ci-dockers-pytorch.yml"
+      - ".actions/*"
+      - ".github/workflows/ci-dockers.yml"
       - "dockers/**"
       - "requirements/pytorch/**"
       - "requirements/fabric/**"
-      - "environment.yml"
       - "setup.py"
       - "!requirements/*/docs.txt"
       - "!*.md"
       - "!**/*.md"
     checks:
-      - "build-cuda (3.9, 1.11, 11.3.1)"
-      - "build-cuda (3.9, 1.12, 11.6.1)"
-      - "build-cuda (3.9, 1.13, 11.7.1)"
-      - "build-cuda (3.10, 2.0, 11.7.1)"
-      - "build-NGC"
-      - "build-pl (3.9, 1.11, 11.3.1)"
-      - "build-pl (3.9, 1.12, 11.6.1)"
-      - "build-pl (3.9, 1.13, 11.7.1)"
-      - "build-pl (3.10, 2.0, 11.7.1)"
+      - "build-cuda (3.9, 1.12, 11.7.1)"
+      - "build-cuda (3.9, 1.13, 11.8.0)"
+      - "build-cuda (3.9, 1.13, 12.0.1)"
+      - "build-cuda (3.10, 2.0, 11.8.0)"
+      - "build-cuda (3.10, 2.0, 12.0.1)"
+      #- "build-NGC"
+      - "build-pl (3.9, 1.12, 11.7.1)"
+      - "build-pl (3.9, 1.13, 11.8.0)"
+      - "build-pl (3.9, 1.13, 12.0.1)"
+      - "build-pl (3.10, 2.0, 11.8.0)"
+      - "build-pl (3.10, 2.0, 12.0.1)"
+
+  # SECTIONS: lightning_data
+
+  - id: "lightning_data: CPU workflow"
+    paths:
+      - ".actions/*"
+      - "requirements/data/**"
+      - "src/lightning/data/**"
+      - "src/lightning_data/*"
+      - "tests/tests_data/**"
+      - "examples/data/**"
+      - "pyproject.toml"  # includes pytest config
+      - ".github/workflows/ci-tests-data.yml"
+      - "!requirements/*/docs.txt"
+      - "!*.md"
+      - "!**/*.md"
+    checks:
+      - "data-cpu (macOS-11, lightning, 3.10, 2.0)"
+      - "data-cpu (ubuntu-20.04, lightning, 3.10, 2.0)"
+      - "data-cpu (windows-2022, lightning, 3.10, 2.0)"
 
   # SECTION: lightning_fabric
 
   - id: "lightning_fabric: CPU workflow"
     paths:
-      - ".actions/**"
+      - ".actions/*"
       - "requirements/fabric/**"
       - "src/lightning/fabric/**"
       - "src/lightning_fabric/*"
@@ -178,10 +208,13 @@ subprojects:
       - "fabric-cpu (macOS-11, fabric, 3.8, 1.13)"
       - "fabric-cpu (ubuntu-20.04, fabric, 3.8, 1.13)"
       - "fabric-cpu (windows-2022, fabric, 3.8, 1.13)"
+      - "fabric-cpu (macOS-12, fabric, 3.11, 2.0)"
+      - "fabric-cpu (ubuntu-22.04, fabric, 3.11, 2.0)"
+      - "fabric-cpu (windows-2022, fabric, 3.11, 2.0)"
 
   - id: "lightning_fabric: Azure GPU"
     paths:
-      - ".actions/**"
+      - ".actions/*"
       - ".azure/gpu-tests-fabric.yml"
       - "examples/fabric/**"
       - "examples/run_fabric_examples.sh"
@@ -201,7 +234,8 @@ subprojects:
       - "!*.md"
       - "!**/*.md"
     checks:
-      - "lightning-fabric (GPUs)"
+      - "lightning-fabric (GPUs) (testing Fabric | latest)"
+      - "lightning-fabric (GPUs) (testing Lightning | latest)"
 
   - id: "lightning_fabric: TPU workflow"
     paths:
@@ -217,7 +251,7 @@ subprojects:
 
   - id: "lightning_app: Tests workflow"
     paths:
-      - ".actions/**"
+      - ".actions/*"
       - ".github/workflows/ci-tests-app.yml"
       - "src/lightning/app/**"
       - "src/lightning_app/*"
@@ -232,16 +266,19 @@ subprojects:
       - "app-pytest (macOS-11, lightning, 3.8, latest)"
       - "app-pytest (macOS-11, lightning, 3.8, oldest)"
       - "app-pytest (macOS-11, app, 3.9, latest)"
+      - "app-pytest (macOS-12, app, 3.11, latest)"
       - "app-pytest (ubuntu-20.04, lightning, 3.8, latest)"
       - "app-pytest (ubuntu-20.04, lightning, 3.8, oldest)"
       - "app-pytest (ubuntu-20.04, app, 3.9, latest)"
+      - "app-pytest (ubuntu-22.04, app, 3.11, latest)"
       - "app-pytest (windows-2022, lightning, 3.8, latest)"
       - "app-pytest (windows-2022, lightning, 3.8, oldest)"
       - "app-pytest (windows-2022, app, 3.8, latest)"
+      - "app-pytest (windows-2022, app, 3.11, latest)"
 
   - id: "lightning_app: Examples"
     paths:
-      - ".actions/**"
+      - ".actions/*"
       - ".github/workflows/ci-examples-app.yml"
       - "src/lightning/app/**"
       - "src/lightning_app/*"
@@ -272,44 +309,45 @@ subprojects:
 
   - id: "lightning: Store"
     paths:
-      - ".azure/app-cloud-store.yml"
+      - ".github/workflows/ci-tests-store.yml"
       - "src/lightning/__about__.py"
       - "src/lightning/__init__.py"
       - "src/lightning/__main__.py"
       - "src/lightning/__setup__.py"
       - "src/lightning/__version__.py"
       - "src/lightning/store/**"
-      - "tests/tests_cloud/**"
+      - "tests/tests_store/**"
     checks:
-      - "Store.cloud (test_store Linux)"
-      - "Store.cloud (test_store Mac)"
-      - "Store.cloud (test_store Windows)"
+      - "store-cpu (macOS-11, lightning, 3.10, 2.0)"
+      - "store-cpu (ubuntu-20.04, lightning, 3.10, 2.0)"
+      - "store-cpu (windows-2022, lightning, 3.10, 2.0)"
 
-  - id: "lightning_app: Azure"
-    paths:
-      - ".actions/**"
-      - ".azure/app-cloud-e2e.yml"
-      - "src/lightning/__about__.py"
-      - "src/lightning/__init__.py"
-      - "src/lightning/__main__.py"
-      - "src/lightning/__setup__.py"
-      - "src/lightning/__version__.py"
-      - "src/lightning/app/**"
-      - "src/lightning_app/*"
-      - "examples/app/**"
-      - "requirements/app/**"
-      - "tests/integrations_app/**"
-      - "!tests/integrations_app/flagship/**"
-      - "setup.py"
-      - "!requirements/*/docs.txt"
-      - "!*.md"
-      - "!**/*.md"
-    checks:
-      - "App.cloud-e2e"
+  # FixMe: re-enable when BE stabilize
+  # - id: "lightning_app: Azure"
+  #   paths:
+  #     - ".actions/*"
+  #     - ".azure/app-cloud-e2e.yml"
+  #     - "src/lightning/__about__.py"
+  #     - "src/lightning/__init__.py"
+  #     - "src/lightning/__main__.py"
+  #     - "src/lightning/__setup__.py"
+  #     - "src/lightning/__version__.py"
+  #     - "src/lightning/app/**"
+  #     - "src/lightning_app/*"
+  #     - "examples/app/**"
+  #     - "requirements/app/**"
+  #     - "tests/integrations_app/**"
+  #     - "!tests/integrations_app/flagship/**"
+  #     - "setup.py"
+  #     - "!requirements/*/docs.txt"
+  #     - "!*.md"
+  #     - "!**/*.md"
+  #   checks:
+  #     - "App.cloud-e2e"
 
   - id: "lightning_app: Docs"
     paths:
-      - ".actions/**"
+      - ".actions/*"
       - "src/lightning/app/**"
       - "src/lightning_app/*"
       - "docs/source-app/**"
@@ -321,14 +359,14 @@ subprojects:
       - "!*.md"
       - "!**/*.md"
     checks:
-      - "make-doctest (app)"
-      - "make-html (app)"
+      - "docs-make (app, doctest)"
+      - "docs-make (app, html)"
 
   # SECTION: common
 
   - id: "mypy"
     paths:
-      - ".actions/**"
+      - ".actions/*"
       - ".github/workflows/code-checks.yml"
       - "requirements/**"
       - "src/**"
@@ -342,7 +380,7 @@ subprojects:
 
   - id: "install"
     paths:
-      - ".actions/**"
+      - ".actions/*"
       - ".github/actions/pkg-check/*"
       - ".github/actions/pkg-install/*"
       - ".github/workflows/_build-packages.yml"
@@ -356,40 +394,42 @@ subprojects:
       - "!**/*.md"
     checks:
       - "install-pkg (ubuntu-22.04, app, 3.8)"
-      - "install-pkg (ubuntu-22.04, app, 3.10)"
+      - "install-pkg (ubuntu-22.04, app, 3.11)"
       - "install-pkg (ubuntu-22.04, fabric, 3.8)"
-      - "install-pkg (ubuntu-22.04, fabric, 3.10)"
+      - "install-pkg (ubuntu-22.04, fabric, 3.11)"
       - "install-pkg (ubuntu-22.04, pytorch, 3.8)"
-      - "install-pkg (ubuntu-22.04, pytorch, 3.10)"
+      - "install-pkg (ubuntu-22.04, pytorch, 3.11)"
       - "install-pkg (ubuntu-22.04, lightning, 3.8)"
-      - "install-pkg (ubuntu-22.04, lightning, 3.10)"
+      - "install-pkg (ubuntu-22.04, lightning, 3.11)"
       - "install-pkg (ubuntu-22.04, notset, 3.8)"
-      - "install-pkg (ubuntu-22.04, notset, 3.10)"
+      - "install-pkg (ubuntu-22.04, notset, 3.11)"
       - "install-pkg (macOS-12, app, 3.8)"
-      - "install-pkg (macOS-12, app, 3.10)"
+      - "install-pkg (macOS-12, app, 3.11)"
       - "install-pkg (macOS-12, fabric, 3.8)"
-      - "install-pkg (macOS-12, fabric, 3.10)"
+      - "install-pkg (macOS-12, fabric, 3.11)"
       - "install-pkg (macOS-12, pytorch, 3.8)"
-      - "install-pkg (macOS-12, pytorch, 3.10)"
+      - "install-pkg (macOS-12, pytorch, 3.11)"
       - "install-pkg (macOS-12, lightning, 3.8)"
-      - "install-pkg (macOS-12, lightning, 3.10)"
+      - "install-pkg (macOS-12, lightning, 3.11)"
       - "install-pkg (macOS-12, notset, 3.8)"
-      - "install-pkg (macOS-12, notset, 3.10)"
+      - "install-pkg (macOS-12, notset, 3.11)"
       - "install-pkg (windows-2022, app, 3.8)"
-      - "install-pkg (windows-2022, app, 3.10)"
+      - "install-pkg (windows-2022, app, 3.11)"
       - "install-pkg (windows-2022, fabric, 3.8)"
-      - "install-pkg (windows-2022, fabric, 3.10)"
+      - "install-pkg (windows-2022, fabric, 3.11)"
       - "install-pkg (windows-2022, pytorch, 3.8)"
-      - "install-pkg (windows-2022, pytorch, 3.10)"
+      - "install-pkg (windows-2022, pytorch, 3.11)"
       - "install-pkg (windows-2022, lightning, 3.8)"
-      - "install-pkg (windows-2022, lightning, 3.10)"
+      - "install-pkg (windows-2022, lightning, 3.11)"
       - "install-pkg (windows-2022, notset, 3.8)"
-      - "install-pkg (windows-2022, notset, 3.10)"
+      - "install-pkg (windows-2022, notset, 3.11)"
 
-  - id: "link-check"
+  - id: "release dockers"
     paths:
-      - ".github/workflows/ci-check-md-links.yml"
-      - ".github/workflows/markdown.links.config.json"
-      - "**/*.md"
+      - ".github/workflows/release-docker.yml"
+      - "dockers/release/*"
     checks:
-      - "check-md-links / markdown-link-check"
+      - "publish-docker (3.9, 1.13, 12.0.1)"
+      - "publish-docker (3.9, 1.13, 12.0.1)"
+      - "publish-docker (3.10, 2.0, 11.8.0)"
+      - "publish-docker (3.10, 2.0, 12.0.1)"

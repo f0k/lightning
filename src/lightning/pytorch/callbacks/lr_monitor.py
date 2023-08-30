@@ -23,6 +23,7 @@ import itertools
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, List, Optional, Set, Tuple, Type
 
+import torch
 from torch.optim.optimizer import Optimizer
 
 import lightning.pytorch as pl
@@ -83,6 +84,7 @@ class LearningRateMonitor(Callback):
             )
             lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, ...)
             return [optimizer], [lr_scheduler]
+
     """
 
     def __init__(self, logging_interval: Optional[str] = None, log_momentum: bool = False) -> None:
@@ -94,12 +96,13 @@ class LearningRateMonitor(Callback):
         self.lrs: Dict[str, List[float]] = {}
 
     def on_train_start(self, trainer: "pl.Trainer", *args: Any, **kwargs: Any) -> None:
-        """Called before training, determines unique names for all lr schedulers in the case of multiple of the
-        same type or in the case of multiple parameter groups.
+        """Called before training, determines unique names for all lr schedulers in the case of multiple of the same
+        type or in the case of multiple parameter groups.
 
         Raises:
             MisconfigurationException:
                 If ``Trainer`` has no ``logger``.
+
         """
         if not trainer.loggers:
             raise MisconfigurationException(
@@ -192,6 +195,10 @@ class LearningRateMonitor(Callback):
         for opt, names in zip(optimizers_without_scheduler, optimizer_hparam_keys):
             current_stat = self._get_lr_momentum_stat(opt, names)
             latest_stat.update(current_stat)
+
+        trainer.callback_metrics.update(
+            {name: torch.tensor(value, device=trainer.strategy.root_device) for name, value in latest_stat.items()}
+        )
 
         return latest_stat
 

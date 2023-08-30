@@ -21,7 +21,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager
 from multiprocessing import Process
 from subprocess import Popen
 from time import sleep
@@ -30,13 +30,11 @@ from typing import Any, Callable, Dict, Generator, List, Optional, Type
 import requests
 from lightning_cloud.openapi import V1LightningappInstanceState
 from lightning_cloud.openapi.rest import ApiException
-from lightning_utilities.core.imports import package_available
 from requests import Session
 from rich import print
 from rich.color import ANSI_COLOR_NAMES
 
-from lightning.app import LightningApp, LightningFlow
-from lightning.app.core import constants
+from lightning.app.core import constants, LightningApp, LightningFlow
 from lightning.app.runners.multiprocess import MultiProcessRuntime
 from lightning.app.testing.config import _Config
 from lightning.app.utilities.app_logs import _app_logs_reader
@@ -146,15 +144,10 @@ class LightningTestApp(LightningApp):
 @requires("click")
 def application_testing(lit_app_cls: Type[LightningTestApp] = LightningTestApp, command_line: List[str] = []) -> Any:
     from unittest import mock
-
     from click.testing import CliRunner
-
     from lightning.cli.lightning_cli import run_app
 
-    patch1 = mock.patch("lightning.app.LightningApp", lit_app_cls)
-    # we need to patch both only with the mirror package
-    patch2 = mock.patch("lightning.LightningApp", lit_app_cls) if package_available("lightning") else nullcontext()
-    with patch1, patch2:
+    with mock.patch("lightning.app.LightningApp", lit_app_cls):
         original = sys.argv
         sys.argv = command_line
         runner = CliRunner()
@@ -296,9 +289,6 @@ def run_app_in_cloud(
         stdout_path = get_logfile(f"run_app_in_cloud_{name}")
 
         cmd_extra_args = []
-
-        if "staging.gridai.dev" in os.getenv("LIGHTNING_CLOUD_URL", ""):
-            cmd_extra_args = ["--cluster-id", "staging"]
 
         with open(stdout_path, "w") as stdout:
             cmd = [
@@ -507,6 +497,7 @@ def delete_cloud_lightning_apps(name=None):
     """Cleanup cloud apps that start with the name test-{PR_NUMBER}-{TEST_APP_NAME}.
 
     PR_NUMBER and TEST_APP_NAME are environment variables.
+
     """
 
     client = LightningClient()

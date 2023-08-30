@@ -40,7 +40,7 @@ def _get_python_cprofile_total_duration(profile):
 
 
 def _sleep_generator(durations):
-    """the profile_iterable method needs an iterable in which we can ensure that we're properly timing how long it
+    """The profile_iterable method needs an iterable in which we can ensure that we're properly timing how long it
     takes to call __next__"""
     for duration in durations:
         time.sleep(duration)
@@ -277,7 +277,7 @@ def test_advanced_profiler_durations(advanced_profiler, action: str, expected: l
 
 @pytest.mark.flaky(reruns=3)
 def test_advanced_profiler_overhead(advanced_profiler, n_iter=5):
-    """ensure that the profiler doesn't introduce too much overhead during training."""
+    """Ensure that the profiler doesn't introduce too much overhead during training."""
     for _ in range(n_iter):
         with advanced_profiler.profile("no-op"):
             pass
@@ -289,7 +289,7 @@ def test_advanced_profiler_overhead(advanced_profiler, n_iter=5):
 
 
 def test_advanced_profiler_describe(tmpdir, advanced_profiler):
-    """ensure the profiler won't fail when reporting the summary."""
+    """Ensure the profiler won't fail when reporting the summary."""
     # record at least one event
     with advanced_profiler.profile("test"):
         pass
@@ -457,6 +457,7 @@ def test_pytorch_profiler_multiple_loggers(tmpdir):
     multiple loggers.
 
     See issue #8157.
+
     """
 
     def look_for_trace(trace_dir):
@@ -619,3 +620,38 @@ def test_profile_callbacks(tmpdir):
         e.name == "[pl][profile][Callback]EarlyStopping{'monitor': 'train_loss', 'mode': 'min'}.on_validation_start"
         for e in pytorch_profiler.function_events
     )
+
+
+@RunIf(min_python="3.10")
+def test_profiler_table_kwargs_summary_length(tmpdir):
+    """Test if setting max_name_column_width in table_kwargs changes table width."""
+
+    summaries = []
+    # Default table_kwargs (None) sets max_name_column_width to 55
+    for table_kwargs in [{"max_name_column_width": 1}, {"max_name_column_width": 5}, None]:
+        pytorch_profiler = PyTorchProfiler(dirpath=tmpdir, filename="profile", schedule=None, table_kwargs=table_kwargs)
+
+        with pytorch_profiler.profile("a"):
+            torch.ones(1)
+        pytorch_profiler.describe()
+        summaries.append(pytorch_profiler.summary())
+
+    # Check if setting max_name_column_width results in a wider table (more dashes)
+    assert summaries[0].count("-") < summaries[1].count("-")
+    assert summaries[1].count("-") < summaries[2].count("-")
+
+
+def test_profiler_invalid_table_kwargs(tmpdir):
+    """Test if passing invalid keyword arguments raise expected error."""
+
+    for key in {"row_limit", "sort_by"}:
+        with pytest.raises(
+            KeyError,
+            match=f"Found invalid table_kwargs key: {key}. This is already a positional argument of the Profiler.",
+        ):
+            PyTorchProfiler(table_kwargs={key: None}, dirpath=tmpdir, filename="profile")
+
+    for key in {"self", "non_existent_keyword_arg"}:
+        with pytest.raises(KeyError) as exc_info:
+            PyTorchProfiler(table_kwargs={key: None}, dirpath=tmpdir, filename="profile")
+        assert exc_info.value.args[0].startswith(f"Found invalid table_kwargs key: {key}.")

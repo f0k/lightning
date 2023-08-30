@@ -43,6 +43,7 @@ def test_import_depth(
     ignore=[
         "lightning.app.components.serve.types",
         "lightning.app.core",
+        "lightning.app.launcher",
         "lightning.app.runners",
         "lightning.app.utilities",
     ]
