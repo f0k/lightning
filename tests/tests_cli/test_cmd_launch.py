@@ -9,7 +9,7 @@ from unittest.mock import ANY, MagicMock, Mock
 
 from click.testing import CliRunner
 
-from lightning.app.cli.lightning_cli_launch import run_flow, run_flow_and_servers, run_frontend, run_server
+from lightning.cli.lightning_cli_launch import run_flow, run_flow_and_servers, run_frontend, run_server
 from lightning.app.core.queues import QueuingSystem
 from lightning.app.frontend.web import StaticWebFrontend
 from lightning.app.launcher import launcher
