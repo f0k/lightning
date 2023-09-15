@@ -40,6 +40,31 @@ class _DtypeContextManager:
         torch.set_default_dtype(self._previous_dtype)
 
 
+# Hard-coded classes to avoid torch.compile graph breaks: https://github.com/pytorch/pytorch/issues/109309
+class _Float16ContextManager:
+    def __enter__(self) -> None:
+        torch.set_default_dtype(torch.float16)
+
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        torch.set_default_dtype(torch.float32)
+
+
+class _Bfloat16ContextManager:
+    def __enter__(self) -> None:
+        torch.set_default_dtype(torch.bfloat16)
+
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        torch.set_default_dtype(torch.float32)
+
+
+class _Float64ContextManager:
+    def __enter__(self) -> None:
+        torch.set_default_dtype(torch.float64)
+
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        torch.set_default_dtype(torch.float32)
+
+
 class _ClassReplacementContextManager:
     """A context manager to monkeypatch classes."""
 

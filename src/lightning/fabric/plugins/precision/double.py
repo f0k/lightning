@@ -19,7 +19,7 @@ from torch import Tensor
 from torch.nn import Module
 
 from lightning.fabric.plugins.precision.precision import Precision
-from lightning.fabric.plugins.precision.utils import _convert_fp_tensor, _DtypeContextManager
+from lightning.fabric.plugins.precision.utils import _convert_fp_tensor, _DtypeContextManager, _Float64ContextManager
 
 
 class DoublePrecision(Precision):
@@ -31,13 +31,23 @@ class DoublePrecision(Precision):
         return module.double()
 
     def init_context(self) -> ContextManager:
-        return _DtypeContextManager(torch.double)
+        return _choose_context_manager(torch.double)
 
     def forward_context(self) -> ContextManager:
-        return _DtypeContextManager(torch.double)
+        return _choose_context_manager(torch.double)
 
     def convert_input(self, data: Any) -> Any:
         return apply_to_collection(data, function=_convert_fp_tensor, dtype=Tensor, dst_type=torch.double)
 
     def convert_output(self, data: Any) -> Any:
         return apply_to_collection(data, function=_convert_fp_tensor, dtype=Tensor, dst_type=torch.get_default_dtype())
+
+
+def _choose_context_manager(dtype: torch.dtype) -> ContextManager:
+    if torch._dynamo.is_compiling():
+        # workaround for https://github.com/pytorch/pytorch/issues/109309#issuecomment-1720381886
+        # TODO: raise an error if the default dtype is not float32. However, we would need to know that
+        # `fullgraph=False` or else this would get raised even if graph breaks are okay. AFAIK there's no API to
+        # know this.
+        return _Float64ContextManager()
+    return _DtypeContextManager(dtype)

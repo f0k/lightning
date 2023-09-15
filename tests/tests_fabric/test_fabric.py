@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import operator
 import os
 import sys
 from re import escape
@@ -21,6 +22,7 @@ import pytest
 import torch
 import torch.distributed
 import torch.nn.functional
+from lightning_utilities import compare_version
 from lightning_utilities.test.warning import no_warning_call
 from torch import nn
 from torch.utils.data import DataLoader, DistributedSampler, RandomSampler, Sampler, SequentialSampler, TensorDataset
@@ -1204,9 +1206,14 @@ def test_verify_launch_called():
     "kwargs",
     [
         {},
-        pytest.param({"precision": "16-true"}, marks=pytest.mark.xfail(raises=RuntimeError, match="Unsupported")),
-        pytest.param({"precision": "64-true"}, marks=pytest.mark.xfail(raises=RuntimeError, match="Unsupported")),
+        {"precision": "16-true"},
+        {"precision": "16-mixed"},
+        pytest.param({"precision": "bf16-true"}, marks=RunIf(bf16_cuda=True)),
+        {"precision": "64-true"},
     ],
+)
+@pytest.mark.skipif(
+    compare_version("lightning_utilities", operator.lt, "0.10.0", use_base_version=True), reason="Requires patch"
 )
 def test_fabric_with_torchdynamo_fullgraph(kwargs):
     class MyModel(torch.nn.Module):
